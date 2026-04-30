@@ -1,0 +1,242 @@
+{% extends 'movies/base.html' %}
+{% block title %}{% if editing %}Edit{% else %}Add Movie{% endif %} — CineAI{% endblock %}
+
+{% block extra_css %}
+<style>
+.form-wrap {
+    max-width: 700px; margin: 2rem auto; padding: 0 1.5rem 3rem;
+}
+.form-title {
+    font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900;
+    margin-bottom: 0.5rem;
+}
+.form-title span { color: var(--gold); }
+.form-subtitle { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+
+.form-section {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.5rem; margin-bottom: 1.25rem;
+}
+.form-section-title {
+    font-size: 0.78rem; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--muted); margin-bottom: 1rem; font-weight: 600;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.form-group { margin-bottom: 1rem; }
+.form-group:last-child { margin-bottom: 0; }
+.form-label {
+    display: block; font-size: 0.82rem; font-weight: 500;
+    color: var(--muted); margin-bottom: 0.4rem;
+}
+.form-label span { color: #e05555; }
+.form-input, .form-textarea, .form-select {
+    width: 100%; padding: 0.65rem 0.9rem;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: inherit; font-size: 0.9rem; outline: none;
+    transition: border-color 0.2s;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--gold); }
+.form-textarea { resize: vertical; min-height: 80px; }
+
+.star-picker { display: flex; gap: 0.3rem; }
+.star-picker input { display: none; }
+.star-picker label {
+    font-size: 2rem; cursor: pointer; color: var(--border);
+    transition: color 0.1s; user-select: none;
+}
+.star-picker:hover label { color: var(--gold); }
+.star-picker label:hover ~ label { color: var(--border); }
+.star-picker input:checked ~ label { color: var(--border); }
+.star-picker input:checked + label { color: var(--gold); }
+
+.genre-grid {
+    display: flex; flex-wrap: wrap; gap: 0.5rem;
+}
+.genre-check { display: none; }
+.genre-label {
+    padding: 0.3rem 0.75rem; border-radius: 20px;
+    border: 1px solid var(--border); font-size: 0.8rem;
+    cursor: pointer; transition: all 0.15s; color: var(--muted);
+    user-select: none;
+}
+.genre-check:checked + .genre-label {
+    border-color: var(--gold); color: var(--gold);
+    background: rgba(232,201,122,0.1);
+}
+
+.mood-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.mood-radio { display: none; }
+.mood-label {
+    padding: 0.4rem 0.85rem; border-radius: 20px;
+    border: 1px solid var(--border); font-size: 0.82rem;
+    cursor: pointer; transition: all 0.15s; color: var(--muted);
+}
+.mood-radio:checked + .mood-label {
+    border-color: #8b5cf6; color: #c4b5fd;
+    background: rgba(139,92,246,0.15);
+}
+
+.toggle-row { display: flex; align-items: center; gap: 0.75rem; }
+.toggle-input { display: none; }
+.toggle-track {
+    width: 44px; height: 24px; border-radius: 12px;
+    background: var(--border); cursor: pointer;
+    position: relative; transition: background 0.2s; flex-shrink: 0;
+}
+.toggle-track::after {
+    content: ''; position: absolute; top: 3px; left: 3px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: white; transition: left 0.2s;
+}
+.toggle-input:checked + .toggle-track { background: var(--gold); }
+.toggle-input:checked + .toggle-track::after { left: 23px; }
+.toggle-label { font-size: 0.9rem; cursor: pointer; }
+
+.error-msg { color: #e05555; font-size: 0.85rem; padding: 0.75rem 1rem; background: rgba(224,85,85,0.1); border: 1px solid rgba(224,85,85,0.3); border-radius: 8px; margin-bottom: 1rem; }
+
+.form-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="form-wrap">
+    <h1 class="form-title">
+        {% if editing %}Edit <span>Movie</span>{% else %}Add to <span>Collection</span>{% endif %}
+    </h1>
+    <p class="form-subtitle">
+        {% if editing %}Update the details for "{{ movie.title }}"{% else %}Add a movie to your private collection with your own ratings and notes{% endif %}
+    </p>
+
+    {% if error %}
+    <div class="error-msg">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <!-- Basic Info -->
+        <div class="form-section">
+            <div class="form-section-title">🎬 Movie Info</div>
+            <div class="form-group">
+                <label class="form-label">Title <span>*</span></label>
+                <input type="text" name="title" class="form-input" placeholder="Movie title"
+                    value="{% if editing %}{{ movie.title }}{% elif post %}{{ post.title }}{% endif %}" required>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label">Year</label>
+                    <input type="number" name="year" class="form-input" placeholder="e.g. 2023" min="1888" max="2030"
+                        value="{% if editing %}{{ movie.year|default:'' }}{% elif post %}{{ post.year }}{% endif %}">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Director</label>
+                    <input type="text" name="director" class="form-input" placeholder="Director name"
+                        value="{% if editing %}{{ movie.director }}{% elif post %}{{ post.director }}{% endif %}">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Cast</label>
+                <input type="text" name="cast" class="form-input" placeholder="Actor 1, Actor 2, Actor 3"
+                    value="{% if editing %}{{ movie.cast }}{% elif post %}{{ post.cast }}{% endif %}">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-textarea" placeholder="What's it about?">{% if editing %}{{ movie.description }}{% elif post %}{{ post.description }}{% endif %}</textarea>
+            </div>
+        </div>
+
+        <!-- Genres -->
+        <div class="form-section">
+            <div class="form-section-title">🏷️ Genres</div>
+            <div class="genre-grid">
+                {% for genre in genres %}
+                <input type="checkbox" class="genre-check" id="g{{ genre.id }}" name="genres" value="{{ genre.id }}"
+                    {% if editing and genre in movie.genres.all %}checked{% endif %}>
+                <label class="genre-label" for="g{{ genre.id }}">{{ genre.name }}</label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Your Rating -->
+        <div class="form-section">
+            <div class="form-section-title">⭐ Your Rating</div>
+            <div class="form-group">
+                <label class="form-label">Score (1-5 stars)</label>
+                <div class="star-picker" style="flex-direction: row-reverse; justify-content: flex-end;">
+                    {% for s in "54321" %}
+                    <input type="radio" id="r{{ s }}" name="my_rating" value="{{ s }}"
+                        {% if editing and movie.my_rating == s|add:"0" %}checked{% endif %}>
+                    <label for="r{{ s }}">★</label>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Your Review</label>
+                <textarea name="my_review" class="form-textarea" placeholder="What did you think? (optional)">{% if editing %}{{ movie.my_review }}{% endif %}</textarea>
+            </div>
+        </div>
+
+        <!-- Watch Status -->
+        <div class="form-section">
+            <div class="form-section-title">📋 Watch Status</div>
+            <div class="form-group">
+                <select name="watch_status" class="form-select">
+                    {% for val, label in status_choices %}
+                    <option value="{{ val }}" {% if editing and movie.watch_status == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <!-- Mood -->
+        <div class="form-section">
+            <div class="form-section-title">🎭 Watch Mood</div>
+            <p style="font-size:0.82rem; color:var(--muted); margin-bottom:0.75rem;">What mood does this movie suit?</p>
+            <div class="mood-grid">
+                {% for val, label in mood_choices %}
+                <input type="radio" class="mood-radio" id="m{{ val }}" name="mood" value="{{ val }}"
+                    {% if editing and movie.mood == val %}checked{% elif not editing and val == 'any' %}checked{% endif %}>
+                <label class="mood-label" for="m{{ val }}">{{ label }}</label>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Personal Notes & Favourite -->
+        <div class="form-section">
+            <div class="form-section-title">📝 Personal Notes</div>
+            <div class="form-group">
+                <textarea name="notes" class="form-textarea" placeholder="Any private notes about this movie — why you like it, where you watched it, who recommended it...">{% if editing %}{{ movie.notes }}{% endif %}</textarea>
+            </div>
+            <div class="toggle-row">
+                <input type="checkbox" class="toggle-input" id="fav" name="is_favourite"
+                    {% if editing and movie.is_favourite %}checked{% endif %}>
+                <label class="toggle-track" for="fav"></label>
+                <label class="toggle-label" for="fav">❤️ Mark as Favourite</label>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-gold" style="flex:1; padding:0.75rem; font-size:0.95rem;">
+                {% if editing %}💾 Save Changes{% else %}➕ Add to Collection{% endif %}
+            </button>
+            <a href="/collection/" class="btn btn-ghost" style="padding:0.75rem 1.25rem;">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Fix star rating display for editing
+document.addEventListener('DOMContentLoaded', () => {
+    const checked = document.querySelector('.star-picker input:checked');
+    if (checked) {
+        let el = checked.nextElementSibling;
+        while (el) {
+            if (el.tagName === 'LABEL') el.style.color = 'var(--gold)';
+            el = el.previousElementSibling;
+        }
+    }
+});
+</script>
+{% endblock %}

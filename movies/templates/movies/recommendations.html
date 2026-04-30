@@ -1,0 +1,98 @@
+{% extends 'movies/base.html' %}
+{% block title %}Your AI Recommendations — CineAI{% endblock %}
+
+{% block extra_css %}
+<style>
+.rec-full-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem; display: flex; gap: 1rem;
+    align-items: flex-start; transition: border-color 0.2s;
+}
+.rec-full-card:hover { border-color: rgba(139,92,246,0.4); }
+.rec-thumb-big {
+    width: 60px; height: 90px; border-radius: 8px;
+    background: var(--bg3); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 2rem;
+}
+.score-bar {
+    height: 4px; border-radius: 2px; background: var(--border); margin-top: 0.5rem; overflow: hidden;
+}
+.score-fill { height: 100%; background: linear-gradient(90deg, #8b5cf6, var(--gold)); border-radius: 2px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>Your AI Recommendations</h1>
+    <p>Personalized picks powered by collaborative filtering & content analysis</p>
+</div>
+
+<div class="section">
+    {% if needs_more_ratings %}
+    <div class="card" style="border-color: rgba(232,201,122,0.4); background: rgba(232,201,122,0.05); margin-bottom: 2rem;">
+        <h3 style="margin-bottom:0.5rem;">⭐ Rate more movies to improve your recommendations</h3>
+        <p style="color:var(--muted); font-size:0.9rem;">You've rated <strong>{{ rated_count }}</strong> movie{{ rated_count|pluralize }}. Rate at least 3 to unlock the full AI engine.</p>
+        <a href="/browse/" class="btn btn-gold" style="margin-top:1rem;">Browse & Rate Movies</a>
+    </div>
+    {% endif %}
+
+    {% if hybrid %}
+    <div class="section-header">
+        <h2 class="section-title">Hybrid AI Picks</h2>
+        <span class="ai-badge"><span class="ai-dot"></span>Content + Collaborative</span>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:1rem; margin-bottom:3rem;">
+        {% for rec in hybrid %}
+        <a href="/movie/{{ rec.movie.id }}/" style="text-decoration:none;">
+            <div class="rec-full-card">
+                <div class="rec-thumb-big">🎬</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-family:'Playfair Display',serif; font-weight:700; font-size:1rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ rec.movie.title }}</div>
+                    <div style="font-size:0.78rem; color:var(--muted); margin:0.2rem 0;">{{ rec.movie.year }} · {% for g in rec.movie.genre_list|slice:":2" %}{{ g }}{% if not forloop.last %}, {% endif %}{% endfor %}</div>
+                    <div style="font-size:0.8rem; color:#c4b5fd;">{{ rec.reason }}</div>
+                    <div class="score-bar">
+                        <div class="score-fill" style="width: {{ rec.score }}%;"></div>
+                    </div>
+                    <div style="font-size:0.72rem; color:var(--muted); margin-top:0.3rem;">Match score: {{ rec.score }}%</div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if content_based %}
+    <div class="section-header">
+        <h2 class="section-title">Based on Your Taste</h2>
+        <span class="ai-badge"><span class="ai-dot"></span>Content-Based</span>
+    </div>
+    <div class="grid-4">
+        {% for movie, score, reason in content_based %}
+        <div class="movie-card">
+            <a href="/movie/{{ movie.id }}/" style="text-decoration:none; color:inherit;">
+                <div class="movie-poster">
+                    <div class="movie-poster-placeholder">
+                        <span class="icon">🎬</span>
+                    </div>
+                </div>
+                <div class="movie-info">
+                    <div class="movie-title">{{ movie.title }}</div>
+                    <div class="movie-meta">{{ movie.year }}</div>
+                    <div style="font-size:0.72rem; color:#c4b5fd; margin-top:0.4rem;">{{ reason }}</div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not hybrid and not content_based %}
+    <div style="text-align:center; padding: 4rem 2rem; color: var(--muted);">
+        <p style="font-size:3rem; margin-bottom:1rem;">🤖</p>
+        <h3 style="margin-bottom:0.5rem; color:var(--text);">No recommendations yet</h3>
+        <p>Start rating movies and the AI will learn your taste!</p>
+        <a href="/browse/" class="btn btn-gold" style="margin-top:1.5rem;">Find Movies to Rate</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

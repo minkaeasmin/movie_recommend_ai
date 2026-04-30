@@ -1,0 +1,68 @@
+{% extends 'movies/base.html' %}
+{% block title %}{% if mode == 'login' %}Sign In{% else %}Join CineAI{% endif %} — CineAI{% endblock %}
+
+{% block extra_css %}
+<style>
+.auth-wrap { min-height: calc(100vh - 60px); display: flex; align-items: center; justify-content: center; padding: 2rem; }
+.auth-card { width: 100%; max-width: 400px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; }
+.auth-title { font-family: 'Playfair Display', serif; font-size: 1.8rem; font-weight: 900; margin-bottom: 0.5rem; }
+.auth-sub { color: var(--muted); font-size: 0.88rem; margin-bottom: 1.75rem; }
+.form-field { margin-bottom: 1rem; }
+.form-field label { display: block; font-size: 0.82rem; font-weight: 500; margin-bottom: 0.4rem; color: var(--muted); }
+.form-field input {
+    width: 100%; padding: 0.65rem 0.9rem;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: inherit; font-size: 0.9rem; outline: none;
+    transition: border-color 0.2s;
+}
+.form-field input:focus { border-color: var(--gold); }
+.errorlist { list-style: none; font-size: 0.8rem; color: var(--red); margin-top: 0.3rem; }
+.auth-switch { text-align: center; margin-top: 1.25rem; font-size: 0.85rem; color: var(--muted); }
+.auth-switch a { color: var(--gold); text-decoration: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="auth-card">
+        <h1 class="auth-title">{% if mode == 'login' %}Welcome back{% else %}Join CineAI{% endif %}</h1>
+        <p class="auth-sub">{% if mode == 'login' %}Sign in to get AI-powered recommendations{% else %}Create an account to discover movies you'll love{% endif %}</p>
+
+        <form method="post">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="form-field">
+                <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                {{ field }}
+                {% if field.errors %}
+                <ul class="errorlist">{% for e in field.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+                {% endif %}
+            </div>
+            {% endfor %}
+            {% if form.non_field_errors %}
+            <div style="color:var(--red); font-size:0.85rem; margin-bottom:0.75rem;">{{ form.non_field_errors }}</div>
+            {% endif %}
+            <button type="submit" class="btn btn-gold" style="width:100%; padding:0.7rem; font-size:0.95rem; margin-top:0.5rem;">
+                {% if mode == 'login' %}Sign In{% else %}Create Account{% endif %}
+            </button>
+        </form>
+
+        <div class="auth-switch">
+            {% if mode == 'login' %}
+            Don't have an account? <a href="/register/">Join free</a>
+            {% else %}
+            Already have an account? <a href="/login/">Sign in</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+// Style Django form inputs
+document.querySelectorAll('input[type=text], input[type=password]').forEach(el => {
+    el.style.cssText = 'width:100%; padding:0.65rem 0.9rem; background:var(--bg); border:1px solid var(--border); border-radius:8px; color:var(--text); font-family:inherit; font-size:0.9rem; outline:none;';
+    el.addEventListener('focus', () => el.style.borderColor = 'var(--gold)');
+    el.addEventListener('blur', () => el.style.borderColor = 'var(--border)');
+});
+</script>
+{% endblock %}

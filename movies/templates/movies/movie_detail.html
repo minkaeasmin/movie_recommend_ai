@@ -1,0 +1,208 @@
+{% extends 'movies/base.html' %}
+{% block title %}{{ movie.title }} — CineAI{% endblock %}
+
+{% block extra_css %}
+<style>
+.detail-hero {
+    background: linear-gradient(180deg, #0e0e20 0%, var(--bg) 100%);
+    padding: 3rem 2rem 2rem;
+}
+.detail-layout { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 220px 1fr; gap: 2.5rem; }
+.detail-poster {
+    width: 100%; aspect-ratio: 2/3; border-radius: 12px;
+    background: var(--bg3); display: flex; align-items: center; justify-content: center;
+    font-size: 4rem; border: 1px solid var(--border); overflow: hidden;
+}
+.detail-title { font-family: 'Playfair Display', serif; font-size: 2.2rem; font-weight: 900; line-height: 1.2; margin-bottom: 0.75rem; }
+.detail-meta { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: center; margin-bottom: 1.25rem; }
+.detail-desc { color: #b8b8d0; line-height: 1.7; font-size: 0.95rem; max-width: 600px; }
+
+.rate-widget {
+    margin-top: 1.5rem; padding: 1.25rem;
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px;
+    max-width: 400px;
+}
+.rate-widget h3 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.75rem; }
+
+.similar-section { padding: 2rem; max-width: 1100px; margin: 0 auto; }
+.reviews-section { padding: 0 2rem 2rem; max-width: 1100px; margin: 0 auto; }
+
+.review-item {
+    padding: 1rem 0; border-bottom: 1px solid var(--border);
+    display: flex; gap: 1rem;
+}
+.reviewer-avatar {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--bg3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; flex-shrink: 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="detail-hero">
+    <div class="detail-layout">
+        <div>
+            <div class="detail-poster">🎬</div>
+        </div>
+        <div>
+            <div class="detail-meta" style="margin-bottom:0.5rem;">
+                {% for genre in movie.genre_list %}
+                <a href="/browse/?genre={{ genre }}" class="badge badge-gold" style="text-decoration:none;">{{ genre }}</a>
+                {% endfor %}
+            </div>
+
+            <h1 class="detail-title">{{ movie.title }}</h1>
+
+            <div class="detail-meta">
+                <span style="color:var(--muted)">{{ movie.year }}</span>
+                {% if movie.runtime_minutes %}
+                <span style="color:var(--muted)">·</span>
+                <span style="color:var(--muted)">{{ movie.runtime_minutes }} min</span>
+                {% endif %}
+                {% if movie.director %}
+                <span style="color:var(--muted)">·</span>
+                <span>{{ movie.director }}</span>
+                {% endif %}
+                {% if movie.imdb_rating %}
+                <span style="color:var(--muted)">·</span>
+                <span class="badge badge-gold">⭐ IMDb {{ movie.imdb_rating }}</span>
+                {% endif %}
+                {% if movie.avg_user_rating %}
+                <span class="badge" style="border-color:#4a9; color:#4a9;">♥ {{ movie.avg_user_rating }}/5 ({{ movie.rating_count }})</span>
+                {% endif %}
+            </div>
+
+            <p class="detail-desc">{{ movie.description }}</p>
+
+            {% if movie.cast_list %}
+            <div style="margin-top:1rem; font-size:0.85rem; color:var(--muted);">
+                <strong style="color:var(--text);">Cast:</strong> {{ movie.cast_list|join:", " }}
+            </div>
+            {% endif %}
+
+            {% if user.is_authenticated %}
+            <div class="rate-widget">
+                {% if user_rating %}
+                <h3>Your Rating: 
+                    <span class="rating-stars">{{ user_rating.score }}</span>/5 ⭐
+                    <span style="font-size:0.78rem; color:var(--muted); font-weight:400; margin-left:0.5rem;">— click to update</span>
+                </h3>
+                {% else %}
+                <h3>Rate this movie</h3>
+                {% endif %}
+
+                <form id="rate-form" onsubmit="submitRating(event, {{ movie.id }})">
+                    {% csrf_token %}
+                    <div class="star-input" id="stars" style="flex-direction:row-reverse; justify-content:flex-end;">
+                        {% for s in stars reversed %}
+                        <input type="radio" id="s{{ s }}" name="score" value="{{ s }}" {% if user_rating.score == s %}checked{% endif %}>
+                        <label for="s{{ s }}">★</label>
+                        {% endfor %}
+                    </div>
+                    <textarea name="review" placeholder="Add a short review (optional)" rows="2"
+                        style="width:100%; margin-top:0.75rem; background:var(--bg3); border:1px solid var(--border); border-radius:6px; padding:0.5rem; color:var(--text); font-family:inherit; font-size:0.85rem; resize:none;">{% if user_rating %}{{ user_rating.review }}{% endif %}</textarea>
+                    <button type="submit" class="btn btn-gold" style="margin-top:0.5rem; width:100%;">Save Rating</button>
+                </form>
+            </div>
+
+            <div style="margin-top:1rem;">
+                <button class="btn btn-ghost {% if in_watchlist %}btn-gold{% endif %}" 
+                    onclick="toggleWatchlist({{ movie.id }}, this)" 
+                    id="wl-main-btn">
+                    {% if in_watchlist %}♥ In Watchlist{% else %}♡ Add to Watchlist{% endif %}
+                </button>
+            </div>
+            {% else %}
+            <div style="margin-top:1.5rem;">
+                <a href="/login/" class="btn btn-gold">Sign in to rate & save</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if similar %}
+<div class="similar-section">
+    <div class="section-header">
+        <h2 class="section-title">Similar Movies</h2>
+        <span class="ai-badge"><span class="ai-dot"></span>AI-matched</span>
+    </div>
+    <div class="grid-6">
+        {% for m in similar %}
+        <div class="movie-card">
+            <a href="/movie/{{ m.id }}/" style="text-decoration:none; color:inherit;">
+                <div class="movie-poster" style="aspect-ratio: 2/3;">
+                    <div class="movie-poster-placeholder" style="width:100%; height:100%;">
+                        <span class="icon">🎬</span>
+                    </div>
+                </div>
+                <div class="movie-info">
+                    <div class="movie-title" style="font-size:0.88rem;">{{ m.title }}</div>
+                    <div class="movie-meta">{{ m.year }}</div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% if all_ratings %}
+<div class="reviews-section">
+    <h2 class="section-title" style="margin-bottom:1rem;">Community Reviews</h2>
+    {% for r in all_ratings %}
+    <div class="review-item">
+        <div class="reviewer-avatar">{{ r.user.username|slice:":1"|upper }}</div>
+        <div>
+            <div style="font-size:0.85rem; font-weight:600;">
+                {{ r.user.username }}
+                <span class="rating-stars" style="margin-left:0.5rem;">{{ r.score }}★</span>
+                <span style="color:var(--muted); font-weight:400; font-size:0.78rem; margin-left:0.5rem;">{{ r.created_at|date:"M j, Y" }}</span>
+            </div>
+            {% if r.review %}
+            <p style="margin-top:0.3rem; font-size:0.88rem; color:#b0b0c8; line-height:1.5;">{{ r.review }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function submitRating(e, movieId) {
+    e.preventDefault();
+    const form = document.getElementById('rate-form');
+    const data = new FormData(form);
+    const resp = await fetch(`/movie/${movieId}/rate/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() },
+        body: data
+    });
+    if (resp.ok) {
+        const result = await resp.json();
+        showToast(`Rating saved! ★ ${result.score}/5`);
+    }
+}
+
+// Override watchlist btn for detail page
+async function toggleWatchlist(movieId, btn) {
+    const resp = await fetch(`/movie/${movieId}/watchlist/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() }
+    });
+    if (resp.ok) {
+        const data = await resp.json();
+        const added = data.status === 'added';
+        btn.textContent = added ? '♥ In Watchlist' : '♡ Add to Watchlist';
+        btn.classList.toggle('btn-gold', added);
+        showToast(data.message);
+    }
+}
+</script>
+{% endblock %}
