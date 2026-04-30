@@ -1,0 +1,247 @@
+{% extends 'movies/base.html' %}
+{% block title %}My Collection — CineAI{% endblock %}
+
+{% block extra_css %}
+<style>
+.collection-header {
+    background: linear-gradient(180deg, #0e0e20 0%, var(--bg) 100%);
+    padding: 2.5rem 2rem 2rem;
+}
+.collection-header-inner {
+    max-width: 1200px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;
+}
+.collection-title { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; }
+.collection-title span { color: var(--gold); }
+
+.stats-row {
+    display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 1.5rem;
+}
+.stat-pill {
+    padding: 0.4rem 1rem; border-radius: 20px;
+    background: var(--card); border: 1px solid var(--border);
+    font-size: 0.82rem; cursor: pointer; text-decoration: none;
+    color: var(--text); transition: all 0.2s;
+}
+.stat-pill:hover, .stat-pill.active { border-color: var(--gold); color: var(--gold); }
+
+.collection-body { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+.filters-bar {
+    display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 1.5rem; align-items: center;
+}
+.filter-select {
+    padding: 0.45rem 0.9rem; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-family: inherit; font-size: 0.85rem;
+    cursor: pointer; outline: none;
+}
+.filter-select:focus { border-color: var(--gold); }
+.search-input {
+    flex: 1; min-width: 200px; padding: 0.45rem 0.9rem; border-radius: 8px;
+    background: var(--card); border: 1px solid var(--border);
+    color: var(--text); font-family: inherit; font-size: 0.85rem; outline: none;
+}
+.search-input:focus { border-color: var(--gold); }
+
+.user-movie-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.25rem;
+    transition: border-color 0.2s, transform 0.2s;
+    position: relative;
+}
+.user-movie-card:hover { border-color: #3a3a4a; transform: translateY(-2px); }
+.user-movie-card.favourite { border-color: rgba(232,201,122,0.4); }
+
+.movie-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; }
+.user-movie-title { font-family: 'Playfair Display', serif; font-size: 1.1rem; font-weight: 700; line-height: 1.3; }
+.user-movie-year { color: var(--muted); font-size: 0.82rem; margin-top: 0.2rem; }
+
+.fav-btn {
+    background: none; border: none; font-size: 1.3rem; cursor: pointer;
+    transition: transform 0.2s; flex-shrink: 0; padding: 0;
+    line-height: 1;
+}
+.fav-btn:hover { transform: scale(1.3); }
+
+.card-badges { display: flex; gap: 0.4rem; flex-wrap: wrap; margin: 0.6rem 0; }
+.status-badge {
+    padding: 0.2rem 0.6rem; border-radius: 20px; font-size: 0.72rem; font-weight: 500;
+    background: var(--bg3); border: 1px solid var(--border);
+}
+.status-watched { border-color: #4a9; color: #4a9; background: rgba(64,170,100,0.1); }
+.status-watching { border-color: #6ab; color: #6ab; background: rgba(100,170,200,0.1); }
+.status-plan { border-color: var(--muted); color: var(--muted); }
+
+.my-rating { color: var(--gold); font-size: 0.9rem; font-weight: 600; margin: 0.4rem 0; }
+.my-review { font-size: 0.82rem; color: var(--muted); line-height: 1.5; margin: 0.4rem 0; font-style: italic; }
+.my-notes { font-size: 0.8rem; color: #7777aa; line-height: 1.5; margin-top: 0.4rem; padding: 0.5rem; background: var(--bg3); border-radius: 6px; }
+
+.card-actions { display: flex; gap: 0.5rem; margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--border); }
+.action-btn {
+    flex: 1; padding: 0.4rem; border-radius: 7px; font-size: 0.8rem;
+    font-weight: 500; cursor: pointer; text-align: center;
+    text-decoration: none; transition: all 0.2s; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); font-family: inherit;
+}
+.action-btn:hover { color: var(--text); border-color: var(--muted); }
+.action-btn.delete:hover { color: #e05555; border-color: #e05555; }
+
+.mood-tag { font-size: 0.75rem; color: #8b5cf6; }
+
+.empty-state {
+    text-align: center; padding: 4rem 2rem; color: var(--muted);
+    grid-column: 1 / -1;
+}
+.empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="collection-header">
+    <div class="collection-header-inner">
+        <div>
+            <h1 class="collection-title">My <span>Collection</span></h1>
+            <p style="color:var(--muted); font-size:0.9rem; margin-top:0.3rem;">Your personal movie library — private to you</p>
+        </div>
+        <a href="/collection/add/" class="btn btn-gold">+ Add Movie</a>
+    </div>
+
+    <!-- Stats pills -->
+    <div style="max-width:1200px; margin: 1.25rem auto 0;">
+        <div class="stats-row">
+            <a href="/collection/" class="stat-pill {% if not status and not mood %}active{% endif %}">🎬 All ({{ stats.total }})</a>
+            <a href="/collection/?status=watched" class="stat-pill {% if status == 'watched' %}active{% endif %}">✅ Watched ({{ stats.watched }})</a>
+            <a href="/collection/?status=watching" class="stat-pill {% if status == 'watching' %}active{% endif %}">▶️ Watching ({{ stats.watching }})</a>
+            <a href="/collection/?status=plan_to_watch" class="stat-pill {% if status == 'plan_to_watch' %}active{% endif %}">📋 Plan to Watch ({{ stats.plan }})</a>
+            <a href="/collection/?fav=1" class="stat-pill {% if request.GET.fav %}active{% endif %}">❤️ Favourites ({{ stats.favourites }})</a>
+        </div>
+    </div>
+</div>
+
+<div class="collection-body">
+    <!-- Filter bar -->
+    <form method="get" class="filters-bar">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search your collection..." class="search-input">
+        <select name="mood" class="filter-select" onchange="this.form.submit()">
+            <option value="">All Moods</option>
+            {% for val, label in mood_choices %}
+            <option value="{{ val }}" {% if mood == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        {% if status %}<input type="hidden" name="status" value="{{ status }}">{% endif %}
+        <button type="submit" class="btn btn-ghost btn-sm">Filter</button>
+        {% if q or mood or status %}<a href="/collection/" class="btn btn-ghost btn-sm">Clear</a>{% endif %}
+    </form>
+
+    <!-- Movie Grid -->
+    <div class="grid-4" style="grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));">
+        {% for movie in movies %}
+        <div class="user-movie-card {% if movie.is_favourite %}favourite{% endif %}" id="card-{{ movie.id }}">
+
+            <!-- Header -->
+            <div class="movie-card-header">
+                <div>
+                    <div class="user-movie-title">{{ movie.title }}</div>
+                    <div class="user-movie-year">
+                        {% if movie.year %}{{ movie.year }}{% endif %}
+                        {% if movie.director %} · {{ movie.director }}{% endif %}
+                    </div>
+                </div>
+                <button class="fav-btn" onclick="toggleFav({{ movie.id }}, this)" title="Toggle favourite">
+                    {% if movie.is_favourite %}❤️{% else %}🤍{% endif %}
+                </button>
+            </div>
+
+            <!-- Badges -->
+            <div class="card-badges">
+                {% if movie.watch_status == 'watched' %}
+                <span class="status-badge status-watched">✅ Watched</span>
+                {% elif movie.watch_status == 'watching' %}
+                <span class="status-badge status-watching">▶️ Watching</span>
+                {% else %}
+                <span class="status-badge status-plan">📋 Plan to Watch</span>
+                {% endif %}
+
+                {% for g in movie.genre_list|slice:":2" %}
+                <span class="badge">{{ g }}</span>
+                {% endfor %}
+
+                {% if movie.mood != 'any' %}
+                <span class="mood-tag">{{ movie.get_mood_display }}</span>
+                {% endif %}
+            </div>
+
+            <!-- Rating -->
+            {% if movie.my_rating %}
+            <div class="my-rating">
+                {% for i in "12345" %}★{% endfor %}
+                {{ movie.my_rating }}/5
+            </div>
+            {% endif %}
+
+            <!-- Review -->
+            {% if movie.my_review %}
+            <div class="my-review">"{{ movie.my_review|truncatechars:100 }}"</div>
+            {% endif %}
+
+            <!-- Description -->
+            {% if movie.description %}
+            <div style="font-size:0.82rem; color:var(--muted); margin-top:0.4rem; line-height:1.5;">
+                {{ movie.description|truncatechars:80 }}
+            </div>
+            {% endif %}
+
+            <!-- Notes -->
+            {% if movie.notes %}
+            <div class="my-notes">📝 {{ movie.notes|truncatechars:80 }}</div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="card-actions">
+                <a href="/collection/edit/{{ movie.id }}/" class="action-btn">✏️ Edit</a>
+                <button class="action-btn delete" onclick="deleteMovie({{ movie.id }}, '{{ movie.title|escapejs }}')">🗑️ Delete</button>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <div class="icon">🎬</div>
+            <h3 style="color:var(--text); margin-bottom:0.5rem;">No movies yet</h3>
+            <p>Start building your personal collection!</p>
+            <a href="/collection/add/" class="btn btn-gold" style="margin-top:1rem; display:inline-flex;">+ Add Your First Movie</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function toggleFav(id, btn) {
+    const resp = await fetch(`/collection/favourite/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() }
+    });
+    if (resp.ok) {
+        const data = await resp.json();
+        btn.textContent = data.is_favourite ? '❤️' : '🤍';
+        const card = document.getElementById(`card-${id}`);
+        card.classList.toggle('favourite', data.is_favourite);
+        showToast(data.is_favourite ? '❤️ Added to favourites!' : 'Removed from favourites');
+    }
+}
+
+async function deleteMovie(id, title) {
+    if (!confirm(`Remove "${title}" from your collection?`)) return;
+    const resp = await fetch(`/collection/delete/${id}/`, {
+        method: 'POST',
+        headers: { 'X-CSRFToken': getCsrf() }
+    });
+    if (resp.ok) {
+        const data = await resp.json();
+        document.getElementById(`card-${id}`).remove();
+        showToast(data.message);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,170 @@
+{% extends 'movies/base.html' %}
+{% block title %}CineAI — Discover Your Next Obsession{% endblock %}
+
+{% block extra_css %}
+<style>
+.hero {
+    padding: 4rem 2rem 3rem;
+    background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(139,92,246,0.12) 0%, transparent 60%);
+    text-align: center;
+    max-width: 700px; margin: 0 auto;
+}
+.hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 900; line-height: 1.15;
+    margin-bottom: 1rem;
+}
+.hero h1 em { color: var(--gold); font-style: normal; }
+.hero p { color: var(--muted); font-size: 1.1rem; margin-bottom: 2rem; line-height: 1.6; }
+.hero-cta { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+
+.rec-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 0.75rem;
+    display: flex; gap: 0.75rem; align-items: flex-start;
+    transition: border-color 0.2s;
+}
+.rec-card:hover { border-color: rgba(139,92,246,0.4); }
+.rec-thumb {
+    width: 48px; height: 72px; border-radius: 6px;
+    background: var(--bg3); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem;
+}
+.rec-info h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; }
+.rec-reason { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
+.rec-score { font-size: 0.75rem; color: #8b5cf6; margin-top: 0.3rem; font-weight: 500; }
+
+.genre-chip {
+    padding: 0.4rem 0.85rem; border-radius: 20px;
+    border: 1px solid var(--border); background: var(--card-bg);
+    font-size: 0.82rem; text-decoration: none; color: var(--text);
+    transition: all 0.2s; display: inline-block; white-space: nowrap;
+}
+.genre-chip:hover { border-color: var(--gold); color: var(--gold); }
+
+.stats-bar {
+    background: var(--bg3); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem; display: flex; gap: 3rem; justify-content: center;
+}
+.stat { text-align: center; }
+.stat-num { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--gold); }
+.stat-label { font-size: 0.78rem; color: var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if not user.is_authenticated %}
+<div style="max-width: 700px; margin: 0 auto;">
+    <div class="hero">
+        <h1>Discover films you'll <em>actually love</em></h1>
+        <p>CineAI uses collaborative filtering and content-based AI to recommend movies tailored to your unique taste.</p>
+        <div class="hero-cta">
+            <a href="/register/" class="btn btn-gold">Get started free</a>
+            <a href="/browse/" class="btn btn-ghost">Browse movies</a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="stats-bar">
+    <div class="stat">
+        <div class="stat-num">{{ total_movies }}</div>
+        <div class="stat-label">Movies</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num">2</div>
+        <div class="stat-label">AI Engines</div>
+    </div>
+    <div class="stat">
+        <div class="stat-num">∞</div>
+        <div class="stat-label">Discoveries</div>
+    </div>
+</div>
+
+{% if user.is_authenticated and recommendations %}
+<div class="section">
+    <div class="section-header">
+        <h2 class="section-title">Your AI Picks</h2>
+        <span class="ai-badge"><span class="ai-dot"></span>Personalized</span>
+        <a href="/recommendations/" style="margin-left: auto; font-size:0.85rem; color: var(--muted); text-decoration:none;">See all →</a>
+    </div>
+    {% if user_rating_count < 3 %}
+    <div class="card" style="margin-bottom:1.5rem; border-color: rgba(232,201,122,0.3); background: rgba(232,201,122,0.05);">
+        <p style="font-size:0.9rem;">⭐ Rate at least <strong>3 movies</strong> to unlock personalized AI recommendations. You've rated <strong>{{ user_rating_count }}</strong> so far.</p>
+    </div>
+    {% endif %}
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem;">
+        {% for rec in recommendations %}
+        <a href="/movie/{{ rec.movie.id }}/" style="text-decoration:none;">
+            <div class="rec-card">
+                <div class="rec-thumb">🎬</div>
+                <div class="rec-info">
+                    <h4>{{ rec.movie.title }}</h4>
+                    <div class="rec-reason">{{ rec.reason }}</div>
+                    <div class="rec-score">Match: {{ rec.score }}%</div>
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<div class="section" style="border-top: 1px solid var(--border);">
+    <div class="section-header">
+        <h2 class="section-title">Trending Now</h2>
+        <span class="section-sub">Highest rated by our community</span>
+    </div>
+    <div class="grid-4">
+        {% for movie in trending %}
+        <div class="movie-card">
+            {% if user.is_authenticated %}
+            <button class="wl-btn {% if movie.id in watchlist_ids %}active{% endif %}"
+                onclick="event.preventDefault(); toggleWatchlist({{ movie.id }}, this)"
+                title="Add to watchlist">{% if movie.id in watchlist_ids %}♥{% else %}♡{% endif %}</button>
+            {% endif %}
+            <a href="/movie/{{ movie.id }}/" style="text-decoration:none; color:inherit;">
+                <div class="movie-poster">
+                    <div class="movie-poster-placeholder">
+                        <span class="icon">🎬</span>
+                        <span>{{ movie.year }}</span>
+                    </div>
+                </div>
+                <div class="movie-info">
+                    <div class="movie-title">{{ movie.title }}</div>
+                    <div class="movie-meta">
+                        <span>{{ movie.year }}</span>
+                        {% if movie.avg_user_rating %}
+                        <span class="rating-stars">★ {{ movie.avg_user_rating }}</span>
+                        {% elif movie.imdb_rating %}
+                        <span style="color:var(--muted)">IMDb {{ movie.imdb_rating }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="movie-meta" style="margin-top:0.4rem; flex-wrap: wrap;">
+                        {% for genre in movie.genre_list|slice:":2" %}
+                        <span class="badge">{{ genre }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="section" style="border-top: 1px solid var(--border);">
+    <div class="section-header">
+        <h2 class="section-title">Browse by Genre</h2>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+        {% for genre in genres %}
+        <a href="/browse/?genre={{ genre.id }}" class="genre-chip">{{ genre.name }} <span style="color:var(--muted)">({{ genre.movie_count }})</span></a>
+        {% endfor %}
+    </div>
+</div>
+
+{% endblock %}

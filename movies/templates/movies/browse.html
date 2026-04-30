@@ -1,0 +1,96 @@
+{% extends 'movies/base.html' %}
+{% block title %}Browse Movies — CineAI{% endblock %}
+
+{% block extra_css %}
+<style>
+.browse-layout { display: grid; grid-template-columns: 200px 1fr; gap: 2rem; padding: 2rem; max-width: 1400px; margin: 0 auto; }
+.sidebar h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 0.75rem; margin-top: 1.5rem; }
+.sidebar h3:first-child { margin-top: 0; }
+.filter-link { display: block; padding: 0.4rem 0.6rem; border-radius: 6px; font-size: 0.85rem; text-decoration: none; color: var(--muted); transition: all 0.15s; }
+.filter-link:hover, .filter-link.active { color: var(--text); background: var(--bg3); }
+.filter-link.active { color: var(--gold); }
+
+.search-bar {
+    display: flex; gap: 0.5rem; margin-bottom: 1.5rem;
+}
+.search-bar input {
+    flex: 1; padding: 0.6rem 1rem; border-radius: 8px;
+    background: var(--card-bg); border: 1px solid var(--border);
+    color: var(--text); font-family: inherit; font-size: 0.9rem;
+    outline: none;
+}
+.search-bar input:focus { border-color: var(--gold); }
+.results-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; font-size: 0.88rem; color: var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="browse-layout">
+    <aside class="sidebar">
+        <h3>Sort By</h3>
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_genre %}genre={{ selected_genre }}&{% endif %}sort=trending" class="filter-link {% if sort == 'trending' %}active{% endif %}">🔥 Trending</a>
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_genre %}genre={{ selected_genre }}&{% endif %}sort=rating" class="filter-link {% if sort == 'rating' %}active{% endif %}">⭐ Top Rated</a>
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_genre %}genre={{ selected_genre }}&{% endif %}sort=year" class="filter-link {% if sort == 'year' %}active{% endif %}">📅 Newest</a>
+        <a href="?{% if q %}q={{ q }}&{% endif %}{% if selected_genre %}genre={{ selected_genre }}&{% endif %}sort=title" class="filter-link {% if sort == 'title' %}active{% endif %}">🔤 A–Z</a>
+
+        <h3>Genre</h3>
+        <a href="?{% if q %}q={{ q }}&{% endif %}sort={{ sort }}" class="filter-link {% if not selected_genre %}active{% endif %}">All Genres</a>
+        {% for genre in genres %}
+        <a href="?{% if q %}q={{ q }}&{% endif %}genre={{ genre.id }}&sort={{ sort }}" class="filter-link {% if selected_genre == genre.id|stringformat:'s' %}active{% endif %}">{{ genre.name }}</a>
+        {% endfor %}
+    </aside>
+
+    <main>
+        <form method="get" class="search-bar">
+            <input type="text" name="q" value="{{ q }}" placeholder="Search movies, directors, actors...">
+            <input type="hidden" name="sort" value="{{ sort }}">
+            {% if selected_genre %}<input type="hidden" name="genre" value="{{ selected_genre }}">{% endif %}
+            <button type="submit" class="btn btn-gold">Search</button>
+        </form>
+
+        <div class="results-header">
+            <span>{{ movies|length }} movies</span>
+            {% if q %}<span>· Results for "<strong>{{ q }}</strong>"</span>{% endif %}
+        </div>
+
+        <div class="grid-4">
+            {% for movie in movies %}
+            <div class="movie-card">
+                {% if user.is_authenticated %}
+                <button class="wl-btn {% if movie.id in watchlist_ids %}active{% endif %}"
+                    onclick="event.preventDefault(); toggleWatchlist({{ movie.id }}, this)"
+                    title="Add to watchlist">{% if movie.id in watchlist_ids %}♥{% else %}♡{% endif %}</button>
+                {% endif %}
+                <a href="/movie/{{ movie.id }}/" style="text-decoration:none; color:inherit;">
+                    <div class="movie-poster">
+                        <div class="movie-poster-placeholder">
+                            <span class="icon">🎬</span>
+                            <span>{{ movie.year }}</span>
+                        </div>
+                    </div>
+                    <div class="movie-info">
+                        <div class="movie-title">{{ movie.title }}</div>
+                        <div class="movie-meta">
+                            <span>{{ movie.year }}</span>
+                            {% if movie.avg_score %}
+                            <span class="rating-stars">★ {{ movie.avg_score|floatformat:1 }}</span>
+                            {% endif %}
+                        </div>
+                        <div class="movie-meta" style="margin-top:0.3rem; flex-wrap:wrap;">
+                            {% for genre in movie.genre_list|slice:":2" %}
+                            <span class="badge">{{ genre }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% empty %}
+            <div style="grid-column: 1/-1; text-align:center; padding: 3rem; color: var(--muted);">
+                <p style="font-size:2rem; margin-bottom:0.5rem;">🎬</p>
+                <p>No movies found. Try a different search or filter.</p>
+            </div>
+            {% endfor %}
+        </div>
+    </main>
+</div>
+{% endblock %}

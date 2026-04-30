@@ -1,0 +1,78 @@
+{% extends 'movies/base.html' %}
+{% block title %}Profile — CineAI{% endblock %}
+
+{% block content %}
+<div class="page-hero">
+    <h1>👤 {{ user.username }}</h1>
+    <p>Your movie journey at a glance</p>
+</div>
+
+<div class="section">
+    <!-- Stats -->
+    <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1rem; margin-bottom:2.5rem; max-width:500px;">
+        <div class="card" style="text-align:center;">
+            <div style="font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--gold);">{{ rated_count }}</div>
+            <div style="font-size:0.8rem; color:var(--muted);">Movies Rated</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--gold);">{{ avg_given }}</div>
+            <div style="font-size:0.8rem; color:var(--muted);">Avg Score</div>
+        </div>
+        <div class="card" style="text-align:center;">
+            <div style="font-family:'Playfair Display',serif; font-size:2rem; font-weight:700; color:var(--gold);">{{ watchlist|length }}</div>
+            <div style="font-size:0.8rem; color:var(--muted);">Watchlist</div>
+        </div>
+    </div>
+    {% if fav_genre %}
+    <div style="margin-bottom:2rem; font-size:0.9rem; color:var(--muted);">
+        Favourite genre: <strong style="color:var(--gold);">{{ fav_genre }}</strong>
+    </div>
+    {% endif %}
+
+    <!-- Ratings -->
+    {% if ratings %}
+    <h2 class="section-title" style="margin-bottom:1rem;">Your Ratings</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:0.75rem; margin-bottom:2.5rem;">
+        {% for r in ratings %}
+        <a href="/movie/{{ r.movie.id }}/" style="text-decoration:none;">
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:0.9rem; display:flex; gap:0.75rem; align-items:center; transition:border-color 0.2s;" onmouseover="this.style.borderColor='#3a3a4a'" onmouseout="this.style.borderColor='var(--border)'">
+                <div style="font-size:1.5rem; width:40px; text-align:center;">🎬</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ r.movie.title }}</div>
+                    <div style="font-size:0.78rem; color:var(--muted);">{{ r.movie.year }}</div>
+                </div>
+                <div style="font-size:1.1rem; color:var(--gold); font-weight:700; flex-shrink:0;">{{ r.score }}★</div>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Watchlist -->
+    {% if watchlist %}
+    <h2 class="section-title" style="margin-bottom:1rem;">♥ Watchlist</h2>
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:0.75rem;">
+        {% for w in watchlist %}
+        <a href="/movie/{{ w.movie.id }}/" style="text-decoration:none;">
+            <div style="background:var(--card-bg); border:1px solid var(--border); border-radius:10px; padding:0.9rem; display:flex; gap:0.75rem; align-items:center;">
+                <div style="font-size:1.5rem; width:40px; text-align:center;">🎬</div>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:600; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{{ w.movie.title }}</div>
+                    <div style="font-size:0.78rem; color:var(--muted);">{{ w.movie.year }}</div>
+                </div>
+                <span style="font-size:0.75rem; color:var(--muted);">{{ w.added_at|date:"M j" }}</span>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not ratings and not watchlist %}
+    <div style="text-align:center; padding:3rem; color:var(--muted);">
+        <p style="font-size:2rem; margin-bottom:1rem;">🍿</p>
+        <p>You haven't rated any movies yet.</p>
+        <a href="/browse/" class="btn btn-gold" style="margin-top:1rem;">Start Exploring</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
